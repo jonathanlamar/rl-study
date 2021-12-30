@@ -1,8 +1,7 @@
 from os import environ
 import os
 import time
-from typing import Dict, List
-from IPython import embed
+from typing import List
 
 import gym
 from gym.core import Env
@@ -17,7 +16,11 @@ class FrozenLakeAgent:
     """
 
     env: Env
-    history: Dict[str, List[float]]
+    returnAverages: np.ndarray
+    hitCounts: np.ndarray
+    stateHistory: List[int]
+    actionHistory: List[int]
+    rewardHistory: List[float]
 
     def __init__(self, stepwiseDiscount: float) -> None:
         """
@@ -32,18 +35,15 @@ class FrozenLakeAgent:
 
         self.stepwiseDiscount = stepwiseDiscount
         self.qualityFn = np.zeros((16, 4))
-        self.resetEnv()
-        self.returns = np.zeros((16, 4))
-        self.hitCounts = np.zeros((16, 4))
-        self.history = {
-            "states": [],
-            "actions": [],
-            "rewards": [],
-        }
-
-    def resetEnv(self) -> None:
-        """Spawn new environment (refresh board)"""
         self.env = gym.make("FrozenLake-v1")
+        self.returnAverages = np.zeros((16, 4))
+        self.hitCounts = np.zeros((16, 4))
+        self.resetHistory()
+
+    def resetHistory(self) -> None:
+        self.states = []
+        self.actions = []
+        self.rewards = []
 
     def renderEnv(self) -> None:
         """Print the current state and previous action on screen, if applicable."""
@@ -58,10 +58,6 @@ class FrozenLakeAgent:
         """
 
         state = self.env.reset()
-        self.history["states"] = [state]
-        # Prefix with 0 for consistent indexing
-        self.history["actions"] = [0.0]
-        self.history["rewards"] = [0.0]
 
         if render:
             time.sleep(1 / fps)
@@ -75,13 +71,13 @@ class FrozenLakeAgent:
             newState, reward, done = self.act(action)
 
             # Changing the reward to punish falling into a hole
-            if done and reward == 0:
-                reward = -1
+            # if done and reward == 0:
+            #     reward = -1
 
             # Do something with this information..?
-            self.history["states"].append(newState)
-            self.history["actions"].append(action)
-            self.history["rewards"].append(reward)
+            self.states.append(state)
+            self.actions.append(action)
+            self.rewards.append(reward)
 
             state = newState
             if done:
@@ -96,30 +92,22 @@ class FrozenLakeAgent:
         """
 
         ret = 0
-        n = len(self.history["states"])
-
-        # Skip the 0th time step because no action was taken
-        for i in reversed(range(1, n)):
-            state = self.history["states"][i]
-            action = self.history["actions"][i]
-            reward = self.history["rewards"][i]
+        for i in reversed(range(len(self.states))):
+            state = self.states[i]
+            action = self.actions[i]
+            reward = self.rewards[i]
             ret = reward + self.stepwiseDiscount * ret
 
-            # Update running average observed return, but only for first visit at
-            # state
-            if state not in self.history["states"][:i]:
+            # Update running average observed return, but only for first visit at state
+            if state not in self.states[:i]:
                 self.hitCounts[state, action] += 1
                 m = self.hitCounts[state, action]
-                self.returns[state, action] = ((m - 1) / m) * self.returns[
-                    state, action
-                ] + (1 / m) * ret
+                self.returnAverages[state, action] = (
+                    (m - 1) / m
+                ) * self.returnAverages[state, action] + (1 / m) * ret
 
-        self.qualityFn = self.returns
-        self.history = {
-            "states": [],
-            "actions": [],
-            "rewards": [],
-        }
+        self.qualityFn = self.returnAverages
+        self.resetHistory()
 
     def act(self, action: int) -> tuple[int, float, bool]:
         """Take action and return relevant information."""
