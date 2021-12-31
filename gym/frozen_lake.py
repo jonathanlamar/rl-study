@@ -7,6 +7,7 @@ import gym
 from gym.core import Env
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.core.fromnumeric import argmax
 from scipy.special import softmax
 
 
@@ -124,8 +125,9 @@ class FrozenLakeAgent:
         if e < eps:
             return np.random.randint(0, 4)
         else:
-            policy = softmax(self.qualityFn[state])
-            return np.random.choice(4, p=policy)
+            # equivalent to argmax(actionValues), but breaks ties randomly
+            actionValues = self.qualityFn[state]
+            return np.random.choice(np.flatnonzero(actionValues == actionValues.max()))
 
 
 if __name__ == "__main__":
