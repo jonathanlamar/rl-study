@@ -29,8 +29,6 @@ class FrozenLakeAgent:
         params:
             stepwiseDiscount: float
                 The discount for return calculations at the step-level.
-            episodicDiscount: float
-                The discount for quality updates at the episode-level.
         """
 
         self.stepwiseDiscount = stepwiseDiscount
@@ -51,7 +49,7 @@ class FrozenLakeAgent:
         self.env.render()
 
     def doEpisode(
-        self, numSteps: int, render: bool = False, fps: int = 10
+        self, numSteps: int, epsilon: float, render: bool = False, fps: int = 10
     ) -> tuple[int, bool]:
         """
         Interact with the environment and save the history of these interactions.
@@ -67,19 +65,14 @@ class FrozenLakeAgent:
         t = 0
         reward = 0
         for t in range(numSteps):
-            action = self.getGreedyAction(state)
+            action = self.getEpsilonGreedyAction(state, eps=epsilon)
             newState, reward, done = self.act(action)
 
-            # Changing the reward to punish falling into a hole
-            # if done and reward == 0:
-            #     reward = -1
-
-            # Do something with this information..?
             self.states.append(state)
             self.actions.append(action)
             self.rewards.append(reward)
-
             state = newState
+
             if done:
                 break
 
@@ -96,10 +89,11 @@ class FrozenLakeAgent:
             state = self.states[i]
             action = self.actions[i]
             reward = self.rewards[i]
-            ret = reward + self.stepwiseDiscount * ret
+            ret = self.stepwiseDiscount * ret + reward
 
-            # Update running average observed return, but only for first visit at state
-            if state not in self.states[:i]:
+            # Update running average observed return, but only for first visit at
+            # (state, action)
+            if (state, action) not in zip(self.states[:i], self.actions[:i]):
                 self.hitCounts[state, action] += 1
                 m = self.hitCounts[state, action]
                 self.returnAverages[state, action] = (
@@ -144,7 +138,8 @@ if __name__ == "__main__":
     wins = np.zeros(numEpisodes)
     agent = FrozenLakeAgent(stepwiseDiscount=0.9)
     for i in range(numEpisodes):
-        _, win = agent.doEpisode(numSteps, render=render, fps=fps)
+        eps = 10e-4
+        _, win = agent.doEpisode(numSteps, epsilon=eps, render=render, fps=fps)
         wins[i] = win
         agent.updateQualityFn()
 
