@@ -7,8 +7,6 @@ import gym
 from gym.core import Env
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.core.fromnumeric import argmax
-from scipy.special import softmax
 
 
 class FrozenLakeAgent:
@@ -149,4 +147,5 @@ if __name__ == "__main__":
     plt.plot(wins.cumsum(), label="total wins")
     plt.legend()
     plt.xlabel("episode")
+    plt.grid()
     plt.show()
