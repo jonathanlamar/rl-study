@@ -44,7 +44,6 @@ class FrozenLakeAgent:
 
     def renderEnv(self) -> None:
         """Print the current state and previous action on screen, if applicable."""
-
         self.env.render()
 
     def doEpisode(
@@ -104,13 +103,11 @@ class FrozenLakeAgent:
 
     def act(self, action: int) -> tuple[int, float, bool]:
         """Take action and return relevant information."""
-
         state, reward, done, _ = self.env.step(action)
         return state, reward, done
 
     def getGreedyAction(self, state: int) -> int:
         """Follows best action accoridng to quality function."""
-
         return self.getEpsilonGreedyAction(state, eps=0.0)
 
     def getEpsilonGreedyAction(self, state: int, eps: float) -> int:
@@ -118,7 +115,6 @@ class FrozenLakeAgent:
         Follows best action according to quality function with 1-eps probability.
         Otherwise picks random action.
         """
-
         e = np.random.rand()
         if e < eps:
             return np.random.randint(0, 4)
